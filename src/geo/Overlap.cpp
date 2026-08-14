@@ -203,7 +203,6 @@ void buildOverlapEntities(GModel *const model, OverlapManager &mgr,
     const int partition = i + 1; // Partitions are 1-indexed
     for(const auto &[covered, elements] : overlaps[i]) {
       if(!covered) continue; // Skip null entities
-
       // Boundary construction later groups overlaps by this parent
       if(!dynamic_cast<ParentEntityType *>(covered->getParentEntity())) {
         Msg::Error("Parent entity of dim %d and tag %d is not of the expected "
@@ -391,6 +390,8 @@ static MLine *createHighOrderLine(const MEdge &edge, MElement *parentElement)
   std::size_t numVertices = hoEdge.getNumVertices();
 
   if(numVertices == 0) {
+    // getEdgeInfo is not implemented for this parent element type: fall back
+    // to a first-order line built from the corner vertices
     Msg::Warning("Could not extract high-order edge in createHighOrderLine");
     return new MLine(edge.getVertex(0), edge.getVertex(1));
   }
@@ -418,6 +419,9 @@ static MElement *createHighOrderFace(const MFace &face, MElement *parentElement)
   std::size_t numVertices = hoFace.getNumVertices();
 
   if(numVertices == 0) {
+    // getFaceInfo is not implemented for this parent element type (e.g.
+    // trihedra, polyhedra): fall back to a first-order element built from the
+    // corner vertices
     Msg::Warning("Could not extract high-order face in createHighOrderFace");
     if(face.getNumVertices() == 3) {
       return new MTriangle(face.getVertex(0), face.getVertex(1),
