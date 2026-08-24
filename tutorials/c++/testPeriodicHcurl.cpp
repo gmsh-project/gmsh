@@ -59,7 +59,7 @@ int main(int argc, char **argv)
   gmsh::model::add("t1");
 
   int order = 2;
-  int dim = 2;
+  int dim = 3;
   int tagDependent;
   int tagMaster;
 
@@ -106,6 +106,7 @@ int main(int argc, char **argv)
 
   if(dim==3)
   {
+    NbrElement=100;
     int boxTag = gmsh::model::occ::addBox(0, 0, 0, l, h, w, 1);
 
     gmsh::model::occ::synchronize();
@@ -153,77 +154,77 @@ int main(int argc, char **argv)
 
 
 
-  int elementType;
-  if(dim==2)
-    elementType = gmsh::model::mesh::getElementType("line",order);
-  else if(dim==3)
-    elementType = gmsh::model::mesh::getElementType("triangle",order);
+  // int elementType;
+  // if(dim==2)
+  //   elementType = gmsh::model::mesh::getElementType("line",order);
+  // else if(dim==3)
+  //   elementType = gmsh::model::mesh::getElementType("triangle",order);
 
-  std::string functionSpaceType = "HcurlLegendre"; // no order
-  // functionSpaceType = "H1Legendre"; // H1legendre is defined by the end nodes but HCurl is edges but the numbers don't match in gui.
+  // std::string functionSpaceType = "HcurlLegendre"; // no order
+  // // functionSpaceType = "H1Legendre"; // H1legendre is defined by the end nodes but HCurl is edges but the numbers don't match in gui.
 
-  functionSpaceType+=std::to_string(order-1);
+  // functionSpaceType+=std::to_string(order-1);
 
-  std::cout << "\nComparison of outputs for master/dependent using getPeriodicKeys for functionSpaceType:" << functionSpaceType << "\n" << std::endl;
+  // std::cout << "\nComparison of outputs for master/dependent using getPeriodicKeys for functionSpaceType:" << functionSpaceType << "\n" << std::endl;
   
 
-  std::vector<int> typeKeys;
-  std::vector<int> typeKeysMaster;
-  std::vector<std::size_t> entityKeys;
-  std::vector<std::size_t> entityKeysMaster;
-  std::vector<double> coord;
-  std::vector<double> coordMaster;
-  std::vector<int> orientationSign;
-  gmsh::model::mesh::getPeriodicKeys(elementType,functionSpaceType,tagDependent,tagMaster,typeKeys,typeKeysMaster,
-                                      entityKeys,entityKeysMaster,coord,coordMaster,orientationSign,true);
+  // std::vector<int> typeKeys;
+  // std::vector<int> typeKeysMaster;
+  // std::vector<std::size_t> entityKeys;
+  // std::vector<std::size_t> entityKeysMaster;
+  // std::vector<double> coord;
+  // std::vector<double> coordMaster;
+  // std::vector<int> orientationSign;
+  // gmsh::model::mesh::getPeriodicKeys(elementType,functionSpaceType,tagDependent,tagMaster,typeKeys,typeKeysMaster,
+  //                                     entityKeys,entityKeysMaster,coord,coordMaster,orientationSign,true);
 
-  std::cout << "Check if the tagMaster is the right one: tagMasterBackUp" << std::endl;
-  std::cout << "tagMaster: " <<tagMaster  << " tagMasterBackUp: " <<tagMasterBackUp << std::endl;
+  // std::cout << "Check if the tagMaster is the right one: tagMasterBackUp" << std::endl;
+  // std::cout << "tagMaster: " <<tagMaster  << " tagMasterBackUp: " <<tagMasterBackUp << std::endl;
 
-  std::cout << "\nCheck the keys of the master and the dependent to see the effect getPeriodicKeys has on it" << std::endl;
-  PrintVector(entityKeysMaster);
-  PrintVector(entityKeys);
+  // std::cout << "\nCheck the keys of the master and the dependent to see the effect getPeriodicKeys has on it" << std::endl;
+  // PrintVector(entityKeysMaster);
+  // PrintVector(entityKeys);
 
-  std::cout << "\nCheck the Typekeys of the master and the dependent to see the effect getPeriodicKeys has on it" << std::endl;
-  PrintVector(typeKeysMaster);
-  PrintVector(typeKeys);
+  // std::cout << "\nCheck the Typekeys of the master and the dependent to see the effect getPeriodicKeys has on it" << std::endl;
+  // PrintVector(typeKeysMaster);
+  // PrintVector(typeKeys);
 
-  std::cout << " \nCoordinates of the keys: " << std::endl;
-  PrintVector(coord);
-  PrintVector(coordMaster);
+  // std::cout << " \nCoordinates of the keys: " << std::endl;
+  // PrintVector(coord);
+  // PrintVector(coordMaster);
 
-  std::cout << " \nFutur vector returning the link +/-1 between the keys: orientationSign: " << std::endl;
-  PrintVector(orientationSign);
+  // std::cout << " \nFutur vector returning the link +/-1 between the keys: orientationSign: " << std::endl;
+  // PrintVector(orientationSign);
 
-  std::vector<int> basisFunctionsOrientationMaster;
-  gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationMaster,tagMaster);
-  std::vector<int> basisFunctionsOrientationDependent;
-  gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationDependent,tagDependent);
+  // std::vector<int> basisFunctionsOrientationMaster;
+  // gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationMaster,tagMaster);
+  // std::vector<int> basisFunctionsOrientationDependent;
+  // gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationDependent,tagDependent);
 
-  std::cout << "\nReturn orientation of the basis function for dependent and master" << std::endl;
-  PrintVector(basisFunctionsOrientationMaster);
-  PrintVector(basisFunctionsOrientationDependent);
-
-
+  // std::cout << "\nReturn orientation of the basis function for dependent and master" << std::endl;
+  // PrintVector(basisFunctionsOrientationMaster);
+  // PrintVector(basisFunctionsOrientationDependent);
 
 
-  if(dim==3)
-  {
-    std::vector<std::size_t> edgeNodesMaster, edgeNodesDependent;
-    gmsh::model::mesh::getElementEdgeNodes(elementType, edgeNodesDependent, tagDependent);
-    gmsh::model::mesh::getElementEdgeNodes(elementType, edgeNodesMaster, tagMasterBackUp);
 
-    gmsh::model::mesh::createEdges();
 
-    std::vector<std::size_t> edgeTagsMaster,edgeTagsDependent;
-    std::vector<int> edgeOrientations;
-    gmsh::model::mesh::getEdges(edgeNodesMaster, edgeTagsMaster, edgeOrientations);
-    gmsh::model::mesh::getEdges(edgeNodesDependent, edgeTagsDependent, edgeOrientations);
+  // if(dim==3)
+  // {
+  //   std::vector<std::size_t> edgeNodesMaster, edgeNodesDependent;
+  //   gmsh::model::mesh::getElementEdgeNodes(elementType, edgeNodesDependent, tagDependent);
+  //   gmsh::model::mesh::getElementEdgeNodes(elementType, edgeNodesMaster, tagMasterBackUp);
 
-    std::cout << " \n The keys for edges in 3D have tags created for this need, not visible in ht GUI: " << std::endl;
-    PrintVector(edgeTagsMaster);
-    PrintVector(edgeTagsDependent);
-  }
+  //   gmsh::model::mesh::createEdges();
+
+  //   std::vector<std::size_t> edgeTagsMaster,edgeTagsDependent;
+  //   std::vector<int> edgeOrientations;
+  //   gmsh::model::mesh::getEdges(edgeNodesMaster, edgeTagsMaster, edgeOrientations);
+  //   gmsh::model::mesh::getEdges(edgeNodesDependent, edgeTagsDependent, edgeOrientations);
+
+  //   std::cout << " \n The keys for edges in 3D have tags created for this need, not visible in ht GUI: " << std::endl;
+  //   PrintVector(edgeTagsMaster);
+  //   PrintVector(edgeTagsDependent);
+  // }
 
 
   gmsh::write("t1.msh");

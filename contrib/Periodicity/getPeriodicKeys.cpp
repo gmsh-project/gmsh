@@ -1,16 +1,5 @@
 #include "getPeriodicKeys.h"
 
-template <typename Type> void PrintVector( std::vector<Type> &vec ) {
-    typename  std::vector<Type>::const_iterator it;
-    std::cout << "(";
-    for(it = vec.begin(); it != vec.end(); it++)
-    {
-        if(it!= vec.begin()) std::cout << ",";
-        std::cout << (*it);
-    }
-    std::cout << ")" << std::endl;
-}
-
 static std::string _getEntityName(int dim, int tag)
 {
   std::stringstream stream;
@@ -71,13 +60,11 @@ _getEntitiesForElementTypes(int dim, int tag,
 
 
 void getElementEdgeNodesCoord(const int elementType,
-                                            std::vector<std::size_t> & nodeTags,
-                                            std::vector<double> & coord,
-                                            std::size_t & numElements,
-                                            const int tag,
-                                            const bool primary,
-                                            const std::size_t task,
-                                            const std::size_t numTasks)
+                            std::vector<std::size_t> & nodeTags,
+                            std::vector<double> & coord,
+                            std::size_t & numElements,
+                            const int tag,
+                            const bool primary)
 {
 
   int dim = ElementType::getDimension(elementType);
@@ -104,25 +91,18 @@ void getElementEdgeNodesCoord(const int elementType,
     }
     numElements += n;
   }
-  if(!numTasks) {
-    Msg::Error("Number of tasks should be > 0");
-    return;
-  }
+  
   if(!numElements || !numEdgesPerEle || !numNodesPerEdge) return;
   if(numEdgesPerEle * numNodesPerEdge * numElements != nodeTags.size()) {
-    if(numTasks > 1)
-      Msg::Warning("Nodes should be preallocated if numTasks > 1");
     nodeTags.resize(numEdgesPerEle * numNodesPerEdge * numElements);
     coord.resize(numEdgesPerEle * numNodesPerEdge * numElements * 3);
   }
-  const size_t begin = (task * numElements) / numTasks;
-  const size_t end = ((task + 1) * numElements) / numTasks;
   size_t o = 0;
-  size_t idx = numEdgesPerEle * numNodesPerEdge * begin;
+  size_t idx = 0;
   for(std::size_t i = 0; i < entities.size(); i++) {
     GEntity *ge = entities[i];
     for(std::size_t j = 0; j < ge->getNumMeshElementsByType(familyType); j++) {
-      if(o >= begin && o < end) {
+      if(o >= 0 && o < numElements) {
         MElement *e = ge->getMeshElementByType(familyType, j);
         for(int k = 0; k < numEdgesPerEle; k++) {
           std::vector<MVertex *> v;
@@ -143,10 +123,12 @@ void getElementEdgeNodesCoord(const int elementType,
     }
   }
 }
-void getElementFaceNodesCoord(
-  const int elementType, const int faceType, std::vector<std::size_t> &nodeTags,
-  std::vector<double> & coord, const int tag, const bool primary, 
-  const std::size_t task,const std::size_t numTasks)
+void getElementFaceNodesCoord(const int elementType, 
+							  const int faceType, 
+							  std::vector<std::size_t> &nodeTags,
+							  std::vector<double> & coord, 
+							  const int tag, 
+							  const bool primary)
 {
 
   int dim = ElementType::getDimension(elementType);
@@ -184,25 +166,19 @@ void getElementFaceNodesCoord(
     numElements += n;
   }
 
-  if(!numTasks) {
-    Msg::Error("Number of tasks should be > 0");
-    return;
-  }
+
   if(!numElements || !numFacesPerEle || !numNodesPerFace) return;
   if(numFacesPerEle * numNodesPerFace * numElements > nodeTags.size()) {
-    if(numTasks > 1)
-      Msg::Warning("Nodes should be preallocated if numTasks > 1");
     nodeTags.resize(numFacesPerEle * numNodesPerFace * numElements);
     coord.resize(numFacesPerEle * numNodesPerFace * numElements * 3);
   }
-  const size_t begin = (task * numElements) / numTasks;
-  const size_t end = ((task + 1) * numElements) / numTasks;
+
   size_t o = 0;
-  size_t idx = numFacesPerEle * numNodesPerFace * begin;
+  size_t idx = 0;
   for(std::size_t i = 0; i < entities.size(); i++) {
     GEntity *ge = entities[i];
     for(std::size_t j = 0; j < ge->getNumMeshElementsByType(familyType); j++) {
-      if(o >= begin && o < end) {
+      if(o >= 0 && o < numElements) {
         MElement *e = ge->getMeshElementByType(familyType, j);
         int nf = e->getNumFaces();
         for(int k = 0; k < nf; k++) {

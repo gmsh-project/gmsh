@@ -33,18 +33,14 @@ void getElementEdgeNodesCoord(const int elementType,
                                             std::vector<double> & coord,
                                             std::size_t & numElements,
                                             const int tag = -1,
-                                            const bool primary = false,
-                                            const std::size_t task = 0,
-                                            const std::size_t numTasks = 1);
+                                            const bool primary = false);
 
 void getElementFaceNodes(const int elementType,
                                         const int faceType,
                                         std::vector<std::size_t> & nodeTags,
                                         std::vector<double> & coord,
                                         const int tag = -1,
-                                        const bool primary = false,
-                                        const std::size_t task = 0,
-                                        const std::size_t numTasks = 1);
+                                        const bool primary = false);
 
 
 void getFullPeriodicKeys(
