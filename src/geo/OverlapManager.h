@@ -31,8 +31,6 @@ private:
   std::tuple<std::vector<overlapFace *>, std::vector<overlapRegion *>>
     _overlaps;
 
-  // GEntityPtrFullHash ((dim, tag)-based) keeps iteration deterministic
-  // run-to-run; hashing pointer addresses is not
   std::unordered_map<GFace *, std::vector<partitionEdge *>, GEntityPtrFullHash>
     _overlapInnerBoundaries2D;
   std::unordered_map<GRegion *, std::vector<partitionFace *>,
