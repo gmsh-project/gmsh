@@ -207,27 +207,6 @@ int main(int argc, char **argv)
 
 
 
-
-  std::vector<std::size_t> nodeTagsMaster, nodeTags;
-  std::vector<double> coordNodeMaster,coordNode;
-  if(dim==2)
-  {
-    std::size_t numElements;
-    gmsh::model::mesh::getElementEdgeNodesCoord(elementType,nodeTagsMaster,coordNodeMaster,numElements,tagMaster,true);
-    gmsh::model::mesh::getElementEdgeNodesCoord(elementType,nodeTags,coordNode,numElements,tagDependent,true);
-  }
-  else if(dim==3)
-  {
-    int elementType3D = gmsh::model::mesh::getElementType("tetrahedron",order);
-    gmsh::model::mesh::getElementFaceNodesCoord(elementType,elementType,nodeTagsMaster,coordNodeMaster,tagMaster,true);
-    gmsh::model::mesh::getElementFaceNodesCoord(elementType,elementType,nodeTags,coordNode,tagDependent,true);
-  }
-  std::cout << "\nReturn the coordinates of the nodes of the edge/face for dependent and master" << std::endl;
-  PrintVector(coordNodeMaster);
-  PrintVector(coordNode);
-
-
-
   if(dim==3)
   {
     std::vector<std::size_t> edgeNodesMaster, edgeNodesDependent;
@@ -253,105 +232,6 @@ int main(int argc, char **argv)
   if(!args.count("-nopopup")) gmsh::fltk::run();
 
   gmsh::finalize();
-
-
-
-  /*
-
-  std::unordered_map<int,std::unordered_map<int,int>> dof2dof2value;
-  std::unordered_map<int,int> dof2value;
-  std::vector<double> elementTypes,elementTags,nodeTags,localCoords,weights,jacobians,
-                      determinants,Global_GP_coord,basisFunctionsOrientation,
-                      basisFunctions,curl_basisFunctions,basisDof,basisDof2,newBasis,newBasis2,invJacobian,keys;
-  int numComponents, numOrientations;
-  double vector, somme, sommeSource;
-
-  double term, termCurl, termSource;
-
-
-  gmsh::model::getEntities(entityTags, dim);
-  entityTags.push_back(tagSource);
-  
-  for (int i = 0; i < entityTags.size(); ++i)
-  {
-    gmsh::model::mesh::getElements(elementTypes, elementTags, nodeTags, dimension, EntityTags[j]);
-
-    for (int e = 0; e < elementTags.size(); ++e)
-    {
-      gmsh::model::mesh::getIntegrationPoints(elementTypes[e],gauss,localCoords, weights);
-      gmsh::model::mesh::getJacobians(elementTypes[e],localCoords,jacobians,determinants,Global_GP_coord,EntityTags[j]);
-
-      gmsh::model::mesh::getBasisFunctions(elementTypes[e],localCoords,functionSpaceType,numComponents,basisFunctions,numOrientations);
-      gmsh::model::mesh::getBasisFunctions(elementTypes[e],localCoords,curl_functionSpaceType,numComponents,curl_basisFunctions,numOrientations);
-
-      gmsh::model::mesh::getBasisFunctionsOrientation(elementTypes[e],functionSpaceType,basisFunctionsOrientation,entityTags[i]);
-      gmsh::model::mesh::getKeysForElement();
-
-      getInverse33(Jacobian,invJacobian,weights.size());
-      for (int dof = 0; dof < keys.size(); ++dof)
-      {
-        sommeSource=0;
-        for (int dof2 = 0; dof2 < keys.size(); ++dof2)
-        {
-          somme=0;
-          for (int g = 0; g < weights.size(); ++g)
-          {
-            basisDof[0]=basisFunctions[dof,orientation,g+0];
-            basisDof[0]=basisFunctions[dof,orientation,g+0];
-            basisDof[0]=basisFunctions[dof,orientation,g+0];
-            getBasisInversed(invJacobian,g,basisDof,newBasis);
-
-            basisDof2[0]=basisFunctions[dof2,orientation,g+0];
-            basisDof2[0]=basisFunctions[dof2,orientation,g+0];
-            basisDof2[0]=basisFunctions[dof2,orientation,g+0];
-            getBasisInversed(invJacobian,g,basisDof2,newBasis2);
-
-            vectorProduct = vw(newBasis,newBasis2);
-            somme+=weights[g] * vectorProduct * determinant[] * term;
-
-
-// if curl, how do I do the invJacobians product to nabla?
-            basisDof[0]=basisFunctions[dof,orientation,g+0];
-            basisDof[0]=basisFunctions[dof,orientation,g+0];
-            basisDof[0]=basisFunctions[dof,orientation,g+0];
-            getBasisInversed(invJacobian,g,basisDof,newBasis);
-
-            basisDof2[0]=basisFunctions[dof2,orientation,g+0];
-            basisDof2[0]=basisFunctions[dof2,orientation,g+0];
-            basisDof2[0]=basisFunctions[dof2,orientation,g+0];
-            getBasisInversed(invJacobian,g,basisDof2,newBasis2);
-
-            vectorProduct = vw(newBasis,newBasis2);
-            somme+=weights[g] * vectorProduct * determinant[] * termCurl;
-
-
-            if(entityTags[i] == tagSource && dof == 0)
-            {
-              vectorProduct = invJacobian * basisFunctions[dof2];
-              sommeSource+=weights[g] * vectorProduct * determinant[] * termSource;
-            }
-
-
-          }
-          dof2dof2value.insert()
-        }
-        dof2value.insert()
-      }
-    }
-  }
-
-  // Periodicity
-  for (int i = 0; i < entityKeysMaster.size(); ++i)
-  {
-    dof2dof2value[entityKeysMaster[i]]=dof2dof2value[entityKeys[i]];
-  }
-
-
-// How to apply Dirichlet and print the solution:
-      
-    ->  Mii=1 & Ji=Eimp
-
-*/
 
   return 0;
 }
