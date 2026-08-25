@@ -104,6 +104,7 @@ int main(int argc, char **argv)
       gmsh::model::mesh::setTransfiniteSurface(allEntities[i].second);
 
     gmsh::model::mesh::setTransfiniteVolume(boxTag);
+    gmsh::model::addPhysicalGroup(3, {boxTag}, 100, "Vol");
 
   }
 
