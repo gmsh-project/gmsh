@@ -205,135 +205,6 @@ void getElementFaceNodesCoord(const int elementType,
 
 
 
-
-
-struct KeyXYZ
-{
-	std::vector<int> index;
-	std::vector<int> typekey;
-	std::size_t entityKeys;
-	double x,y,z;
-	std::vector<int> nodes;
-};
-
-class KeyXYZRTree {
-private:
-	RTree<struct KeyXYZ *, double, 3, double> *_rtree;   
-	double _tol;
-	static bool rtree_callback(struct KeyXYZ *v, void *ctx)
-	{
-		struct KeyXYZ **out = static_cast<KeyXYZ **>(ctx);   
-		*out = v;
-	return false; // we're done searching
-}
-
-public:
-	KeyXYZRTree(double tolerance = 1.e-8)
-	{
-		_rtree = new RTree<struct KeyXYZ *, double, 3, double>();
-		_tol = tolerance;
-	}
-	~KeyXYZRTree()
-	{
-		_rtree->RemoveAll();
-		delete _rtree;
-	}
-	void insert(struct KeyXYZ *v)
-	{
-		struct KeyXYZ *out;
-		double _min[3] = {v->x - _tol, v->y - _tol, v->z - _tol};
-		double _max[3] = {v->x + _tol, v->y + _tol, v->z + _tol};
-
-		if(!_rtree->Search(_min, _max, rtree_callback, &out)) {
-			_rtree->Insert(_min, _max, v);
-		}
-		else {
-			Msg::Debug("Node %d (%.16g, %.16g, %.16g) already exists "
-				"with tolerance %g: node %d (%.16g, %.16g, %.16g)",
-				v->entityKeys, v->x, v->y, v->z, _tol, out->entityKeys, out->x,
-				out->y, out->z);
-		}
-	}
-	struct KeyXYZ *find(struct KeyXYZ *n)
-	{
-		struct KeyXYZ *out;
-		double _min[3] = {n->x - _tol, n->y - _tol, n->z - _tol};
-		double _max[3] = {n->x + _tol, n->y + _tol, n->z + _tol};
-		if(_rtree->Search(_min, _max, rtree_callback, &out)) { return out; }
-		else {
-			Msg::Debug("Could not find node corresponding to reference node "
-				"%d (%g, %g, %g)",
-				n->entityKeys, n->x, n->y, n->z);
-			return 0;
-		}
-	}
-};
-
-
-
-
-struct NodeXYZ
-{
-	int nodeTag;
-	double x,y,z;
-};
-
-class NodeXYZRTree {
-private:
-	RTree<struct NodeXYZ *, double, 3, double> *_rtree;   
-	double _tol;
-	static bool rtree_callback(struct NodeXYZ *v, void *ctx)
-	{
-		struct NodeXYZ **out = static_cast<NodeXYZ **>(ctx);   
-		*out = v;
-	return false; // we're done searching
-}
-
-public:
-	NodeXYZRTree(double tolerance = 1.e-8)
-	{
-		_rtree = new RTree<struct NodeXYZ *, double, 3, double>();
-		_tol = tolerance;
-	}
-	~NodeXYZRTree()
-	{
-		_rtree->RemoveAll();
-		delete _rtree;
-	}
-	void insert(struct NodeXYZ *v)
-	{
-		struct NodeXYZ *out;
-		double _min[3] = {v->x - _tol, v->y - _tol, v->z - _tol};
-		double _max[3] = {v->x + _tol, v->y + _tol, v->z + _tol};
-
-		if(!_rtree->Search(_min, _max, rtree_callback, &out)) {
-			_rtree->Insert(_min, _max, v);
-		}
-		else {
-			Msg::Debug("Node %d (%.16g, %.16g, %.16g) already exists "
-				"with tolerance %g: node %d (%.16g, %.16g, %.16g)",
-				v->nodeTag, v->x, v->y, v->z, _tol, out->nodeTag, out->x,
-				out->y, out->z);
-		}
-	}
-	struct NodeXYZ *find(struct NodeXYZ *n)
-	{
-		struct NodeXYZ *out;
-		double _min[3] = {n->x - _tol, n->y - _tol, n->z - _tol};
-		double _max[3] = {n->x + _tol, n->y + _tol, n->z + _tol};
-		if(_rtree->Search(_min, _max, rtree_callback, &out)) { return out; }
-		else {
-	  // std::cout << "Could not find node corresponding to reference node " << n->entityKeys <<
-	  //           "("<<n->x <<","<<n->y << ","<<n->z << ")" << std::endl;
-			Msg::Debug("Could not find node corresponding to reference node "
-				"%d (%g, %g, %g)",
-				n->nodeTag, n->x, n->y, n->z);
-			return 0;
-		}
-	}
-};
-
-
 void getFullPeriodicKeys(
 	GEntity *ge,
 	const int elementType, const std::string &fsName,int &order, 
@@ -392,7 +263,7 @@ void getFullPeriodicKeys(
 			}
 		}
 	}
-	else if(fsName == "HcurlLegendre" || fsName == "H1Legendre") 
+	else if(dim==1 && (fsName == "HcurlLegendre" || fsName == "H1Legendre")) 
 	{
 		std::vector<double> affineTransform = ge->affineTransform;
 		std::vector<std::size_t> nodeTagsMasterEdges, nodeTagsEdges;
@@ -517,16 +388,16 @@ void getFullPeriodicKeys(
 					std::cout << "No matching node for periodicity." << std::endl;
 				int node2=foundNode->nodeTag;
 
-	      		// CLaude code
+	      // CLaude code
 				bool flip = (nodeTagsEdges[2*el] > nodeTagsEdges[2*el+1] && node1 < node2) || (nodeTagsEdges[2*el] < nodeTagsEdges[2*el+1] && node1 > node2);
 				if(flip) 
 				{
-			        int localIndex = static_cast<int>(j - el*nbrKeysPerElement); // 0 = se, 1 = se2, ...
-			        int degree = localIndex + 1;                                  // p = 1, 2, ...
-			        orientationSign[j] = (degree % 2 == 0) ? 1 : -1;
-	    		}
-			    // End of Claude code
-			    // orientation is between two nodes so size of orientation is half the size of keys. (keys are only end node of edge)
+	        int localIndex = static_cast<int>(j - el*nbrKeysPerElement); // 0 = se, 1 = se2, ...
+	        int degree = localIndex + 1;                                  // p = 1, 2, ...
+	        orientationSign[j] = (degree % 2 == 0) ? 1 : -1;
+	    	}
+			  // End of Claude code
+			  // orientation is between two nodes so size of orientation is half the size of keys. (keys are only end node of edge)
 
 
 	}
@@ -538,6 +409,6 @@ void getFullPeriodicKeys(
 
 else {
 	Msg::Error("Periodic key generation currently only available for "
-		"\"IsoParametric\" and \"Lagrange\" function spaces");
+		"\"IsoParametric\", \"Lagrange\" and \"1D HcurlLegendre\" function spaces");
 }
 }
