@@ -137,7 +137,8 @@ int main(int argc, char **argv)
   std::vector<double> coord;
   std::vector<double> coordMaster;
   std::vector<int> orientationSign;
-  gmsh::model::mesh::getPeriodicKeys(elementType,functionSpaceType,tagDependent,tagMaster,typeKeys,typeKeysMaster,
+  if(dim==2)
+    gmsh::model::mesh::getPeriodicKeys(elementType,functionSpaceType,tagDependent,tagMaster,typeKeys,typeKeysMaster,
                                       entityKeys,entityKeysMaster,coord,coordMaster,orientationSign,true);
 
   std::cout << "-Periodic: tagMaster: " <<tagMaster  << "; Expected: tagMasterBackUp: " <<tagMasterBackUp << std::endl;
@@ -171,20 +172,11 @@ int main(int argc, char **argv)
 
   if(dim==3)
   {
-    std::vector<std::size_t> edgeNodesMaster, edgeNodesDependent;
-    gmsh::model::mesh::getElementFaceNodes(elementType,3, edgeNodesDependent, tagDependent);
-    gmsh::model::mesh::getElementFaceNodes(elementType,3, edgeNodesMaster, tagMasterBackUp);
-
-    gmsh::model::mesh::createEdges();
-
-    std::vector<std::size_t> edgeTagsMaster,edgeTagsDependent;
-    std::vector<int> edgeOrientations;
-    gmsh::model::mesh::getEdges(edgeNodesMaster, edgeTagsMaster, edgeOrientations);
-    gmsh::model::mesh::getEdges(edgeNodesDependent, edgeTagsDependent, edgeOrientations);
-
-    std::cout << " \n-New tagKeys for edges from createEdges (not visible in the GUI): " << std::endl;
-    PrintVector(edgeTagsMaster);
-    PrintVector(edgeTagsDependent);
+    std::vector<std::size_t> facetsNodesMaster, facetsNodesDependent;
+    gmsh::model::mesh::getElementFaceNodes(elementType,3, facetsNodesDependent, tagDependent);
+    gmsh::model::mesh::getElementFaceNodes(elementType,3, facetsNodesMaster, tagMasterBackUp);
+    PrintVector(facetsNodesMaster);
+    PrintVector(facetsNodesDependent);
   }
 
 
