@@ -3354,10 +3354,10 @@ module gmsh
   !! with a number of layers equal to `layers'. The overlaps of the bounding
   !! entities (i.e. "boundary overlaps") and the inner boundaries of the
   !! overlaps (i.e. "overlap boundaries") are always built: the
-  !! `createBoundaries' flag is currently ignored. Return the tag of the newly
+  !! `createBoundaries' flag is currently ignored. Return the index of the newly
   !! created overlap group, which can be passed as `overlapIndex' to the query
-  !! functions (tags are assigned sequentially from 0, so the tag is also the
-  !! position of the group).
+  !! functions (indices are assigned sequentially from 0, so the index is also
+  !! the position of the group).
   function gmshModelMeshCreateOverlaps(layers, &
                                        createBoundaries, &
                                        ierr)
