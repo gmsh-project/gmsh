@@ -127,58 +127,47 @@ int main(int argc, char **argv)
 
   functionSpaceType+=std::to_string(order-1);
 
-  std::cout << "\n-Comparison of outputs for master/dependent using getPeriodicKeys for functionSpaceType:" << functionSpaceType << "\n" << std::endl;
-  
+  std::cout << "\033[1;35m \ngetPeriodicKeys with "<< functionSpaceType <<" is only available for 2D geometries\033[0m\n" << std::endl;
 
-  std::vector<int> typeKeys;
-  std::vector<int> typeKeysMaster;
-  std::vector<std::size_t> entityKeys;
-  std::vector<std::size_t> entityKeysMaster;
-  std::vector<double> coord;
-  std::vector<double> coordMaster;
-  std::vector<int> orientationSign;
   if(dim==2)
+  {
+    std::vector<int> typeKeys;
+    std::vector<int> typeKeysMaster;
+    std::vector<std::size_t> entityKeys;
+    std::vector<std::size_t> entityKeysMaster;
+    std::vector<double> coord;
+    std::vector<double> coordMaster;
+    std::vector<int> orientationSign;
+
     gmsh::model::mesh::getPeriodicKeys(elementType,functionSpaceType,tagDependent,tagMaster,typeKeys,typeKeysMaster,
                                       entityKeys,entityKeysMaster,coord,coordMaster,orientationSign,true);
 
-  std::cout << "-Periodic: tagMaster: " <<tagMaster  << "; Expected: tagMasterBackUp: " <<tagMasterBackUp << std::endl;
+    std::cout << "-Periodic: tagMaster: " <<tagMaster  << "; Expected: tagMasterBackUp: " <<tagMasterBackUp << std::endl;
 
-  std::cout << "\n-Keys of master and dependent to see the effect getPeriodicKeys" << std::endl;
-  PrintVector(entityKeysMaster);
-  PrintVector(entityKeys);
+    std::cout << "\n-Keys of master and dependent to see the effect getPeriodicKeys" << std::endl;
+    PrintVector(entityKeysMaster);
+    PrintVector(entityKeys);
 
-  std::cout << "\n-Typekeys of master and dependent to see the effect getPeriodicKeys" << std::endl;
-  PrintVector(typeKeysMaster);
-  PrintVector(typeKeys);
+    std::cout << "\n-Typekeys of master and dependent to see the effect getPeriodicKeys" << std::endl;
+    PrintVector(typeKeysMaster);
+    PrintVector(typeKeys);
 
-  std::cout << " \n-Coordinates of master and dependent to see the effect getPeriodicKeys: " << std::endl;
-  PrintVector(coordMaster);
-  PrintVector(coord);
+    std::cout << " \n-Coordinates of master and dependent to see the effect getPeriodicKeys: " << std::endl;
+    PrintVector(coordMaster);
+    PrintVector(coord);
 
-  std::cout << " \n-Vector returning the link +/-1 between the keys: orientationSign (Only for 2D geometries): " << std::endl;
-  PrintVector(orientationSign);
+    std::cout << " \n-Vector returning the link +/-1 between the keys: orientationSign (Only for 2D geometries): " << std::endl;
+    PrintVector(orientationSign);
 
-  std::vector<int> basisFunctionsOrientationMaster;
-  gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationMaster,tagMaster);
-  std::vector<int> basisFunctionsOrientationDependent;
-  gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationDependent,tagDependent);
+    std::vector<int> basisFunctionsOrientationMaster;
+    gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationMaster,tagMaster);
+    std::vector<int> basisFunctionsOrientationDependent;
+    gmsh::model::mesh::getBasisFunctionsOrientation(elementType,functionSpaceType,basisFunctionsOrientationDependent,tagDependent);
 
-  std::cout << "\n-Basis function orientation for master and dependent" << std::endl;
-  PrintVector(basisFunctionsOrientationMaster);
-  PrintVector(basisFunctionsOrientationDependent);
-
-
-
-
-  if(dim==3)
-  {
-    std::vector<std::size_t> facetsNodesMaster, facetsNodesDependent;
-    gmsh::model::mesh::getElementFaceNodes(elementType,3, facetsNodesDependent, tagDependent);
-    gmsh::model::mesh::getElementFaceNodes(elementType,3, facetsNodesMaster, tagMasterBackUp);
-    PrintVector(facetsNodesMaster);
-    PrintVector(facetsNodesDependent);
+    std::cout << "\n-Basis function orientation for master and dependent" << std::endl;
+    PrintVector(basisFunctionsOrientationMaster);
+    PrintVector(basisFunctionsOrientationDependent);
   }
-
 
   gmsh::write("tPeriodic.msh");
 

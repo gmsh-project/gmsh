@@ -157,7 +157,6 @@ void getElementFaceNodesCoord(const int elementType,
               // getFaceVertices
               e->getFaceVertices(k, v);
               numNodesPerFace = v.size();
-              std::cout << "numNodesPerFace =  " <<numNodesPerFace << std::endl;
             }
           }
         }
@@ -273,10 +272,6 @@ void getFullPeriodicKeys(
 		getElementEdgeNodesCoord(elementType,nodeTagsMasterEdges,coordNodeMaster,numElements,tagMaster,true);
 		getElementEdgeNodesCoord(elementType,nodeTagsEdges,coordNode,numElements,tag,true);
 
-		gmsh::model::mesh::getElementEdgeNodes(elementType,nodeTagsMasterEdges,tagMaster,true);
-		gmsh::model::mesh::getElementEdgeNodes(elementType,nodeTagsEdges,tag,true);
-
-
 		int nbrPrimaryNodePerElement = nodeTagsEdges.size()/numElements;
 		int nbrKeysPerElement = entityKeys.size()/numElements;
 
@@ -318,11 +313,6 @@ void getFullPeriodicKeys(
 				Key->typekey = {typeKeysMaster[i]};
 				Key->index = {static_cast<int>(i)};
 				Key->entityKeys = entityKeysMaster_temp[i];
-
-				std::vector<int> nodesForKey;
-				for (int f = 0; f < nbrPrimaryNodePerElement; ++f)
-					nodesForKey.push_back(nodeTagsMasterEdges[nbrPrimaryNodePerElement*i+f]);
-				Key->nodes = nodesForKey;
 			}
 			else
 			{
@@ -375,7 +365,7 @@ void getFullPeriodicKeys(
 
 				struct NodeXYZ *foundNode = NodeTree.find(node);
 				if(!foundNode)
-					std::cout << "No matching node for periodicity." << std::endl;
+					Msg::Warning("Could not find node corresponding to reference node " "%d (%g, %g, %g)", node->nodeTag, node->x, node->y, node->z);
 				int node1=foundNode->nodeTag;
 
 				node = new NodeXYZ();
@@ -385,7 +375,7 @@ void getFullPeriodicKeys(
 
 				foundNode = NodeTree.find(node);
 				if(!foundNode)
-					std::cout << "No matching node for periodicity." << std::endl;
+					Msg::Warning("Could not find node corresponding to reference node " "%d (%g, %g, %g)", node->nodeTag, node->x, node->y, node->z);
 				int node2=foundNode->nodeTag;
 
 	      // CLaude code
@@ -393,14 +383,16 @@ void getFullPeriodicKeys(
 				if(flip) 
 				{
 	        int localIndex = static_cast<int>(j - el*nbrKeysPerElement); // 0 = se, 1 = se2, ...
-	        int degree = localIndex + 1;                                  // p = 1, 2, ...
+	        int degree = localIndex + 1;                                 // p = 1, 2, ...
 	        orientationSign[j] = (degree % 2 == 0) ? 1 : -1;
 	    	}
 			  // End of Claude code
 			  // orientation is between two nodes so size of orientation is half the size of keys. (keys are only end node of edge)
 
 
-	}
+			}
+			else
+				Msg::Warning("Could not find key corresponding to reference key " "%d (%g, %g, %g)", Key->entityKeys, Key->x, Key->y, Key->z);
 	diffKey++;
 	if(diffKey>order)
 		diffKey=0;

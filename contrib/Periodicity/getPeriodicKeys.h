@@ -139,8 +139,6 @@ public:
     double _max[3] = {n->x + _tol, n->y + _tol, n->z + _tol};
     if(_rtree->Search(_min, _max, rtree_callback, &out)) { return out; }
     else {
-    // std::cout << "Could not find node corresponding to reference node " << n->entityKeys <<
-    //           "("<<n->x <<","<<n->y << ","<<n->z << ")" << std::endl;
       Msg::Debug("Could not find node corresponding to reference node "
         "%d (%g, %g, %g)",
         n->nodeTag, n->x, n->y, n->z);
