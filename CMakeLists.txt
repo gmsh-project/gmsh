@@ -2374,7 +2374,7 @@ if(ENABLE_TESTS AND NOT DISABLE_GMSH_TESTS)
        # benchmarks/hexdom/*.geo # fails on windows and macos
        benchmarks/io_msh/polytopes.geo
        benchmarks/io_msh/read_back.geo benchmarks/io_msh/faces.geo
-       benchmarks/io_msh/views.geo
+       benchmarks/io_msh/views.geo benchmarks/io_msh/seam.geo
        benchmarks/io_vtk/*.geo)
   # fails on the CI machines, not understood yet:
   list(FILTER ALLFILES EXCLUDE REGEX "io_vtk/vtu_roundtrip.geo$")
