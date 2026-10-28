@@ -21,8 +21,9 @@ private:
   bool _redraw;
 
 public:
-  contextWindow(int w, int h, bool nonModal, const char *l = nullptr)
-    : paletteWindow(w, h, nonModal, l), _redraw(false)
+  contextWindow(int w, int h, bool nonModal, const char *l = nullptr,
+                int *offset = nullptr)
+    : paletteWindow(w, h, nonModal, l, offset), _redraw(false)
   {
   }
   virtual int handle(int event);
@@ -45,9 +46,17 @@ private:
   std::string _name;
   std::vector<std::pair<int, std::string> > _physicalGroups;
   std::vector<std::vector<GEntity *> > _physicalGroupEntities;
+  // the widgets of the parameters, with the codes of where they go
+  struct placed {
+    Fl_Widget *widget;
+    int x, y;
+  };
+  std::vector<placed> _placed;
 
 public:
   contextWindow *win;
+  // places the widgets for a window w wide; returns its height
+  int place(int w);
 
 public:
   onelabContextWindow(int deltaFontSize = 0);

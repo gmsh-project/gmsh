@@ -52,6 +52,7 @@ opt(GEOMETRYCENTRAL "Enable geometry-central library (experimental)" ${DEFAULT})
 opt(GETDP "Enable GetDP solver (linked as a library, experimental)" ${DEFAULT})
 opt(GMM "Enable GMM linear solvers (simple alternative to PETSc)" ${DEFAULT})
 opt(GRAPHICS "Enable building graphics lib even without GUI (advanced)" OFF)
+opt(HIERARCHICAL_BASIS "Enable hierarchical basis functions" ${DEFAULT})
 opt(HXT "Enable HXT library (for reparametrization and meshing)" ${DEFAULT})
 opt(MATHEX "Enable Mathex expression parser (used by plugins and options)" ${DEFAULT})
 opt(MED "Enable MED mesh and post file formats" ${DEFAULT})
@@ -98,7 +99,6 @@ opt(TCMALLOC "Enable libtcmalloc (fast malloc that does not release memory)" OFF
 opt(TESTS "Enable tests" ${DEFAULT})
 opt(TINYOBJLOADER "Enable TibyObjLoader for reading Wavefront files)" ON)
 opt(TINYXML2 "Enable TinyXML2 parser (used by XAO reader)" ${DEFAULT})
-opt(TOUCHBAR "Enable Apple Touch bar" ${DEFAULT})
 opt(VISUDEV "Enable additional visualization capabilities for development purposes" OFF)
 opt(VOROPP "Enable voro++ (for hex meshing, experimental)" ${DEFAULT})
 opt(WRAP_JAVA "Generate SWIG Java wrappers for private API" OFF)
@@ -118,7 +118,7 @@ if(NOT GMSH_RELEASE)
   find_package(Git)
   if(GIT_FOUND)
     execute_process(COMMAND ${GIT_EXECUTABLE} log -1 --format=%h
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} ERROR_QUIET
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} ERROR_QUIET
                     OUTPUT_VARIABLE GIT_COMMIT_HASH
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
   endif()
@@ -232,6 +232,7 @@ include(CheckTypeSize)
 include(CheckSymbolExists)
 include(CheckIncludeFile)
 include(CheckCXXCompilerFlag)
+include(CheckCXXSourceCompiles)
 include(CheckCCompilerFlag)
 
 macro(set_config_option VARNAME STRING)
@@ -639,20 +640,31 @@ if(ENABLE_VISUDEV)
 endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/fltk AND ENABLE_FLTK)
-  # first, try to use fltk-config for fltk >= 1.3 (FindFLTK is buggy on Unix,
-  # where e.g. xft and xinerama options are not dealt with)
+  # first, try to use fltk-config (FindFLTK is buggy on Unix, where e.g. xft
+  # and xinerama options are not dealt with)
   find_program(FLTK_CONFIG_SCRIPT fltk-config)
   if(FLTK_CONFIG_SCRIPT)
     execute_process(COMMAND ${FLTK_CONFIG_SCRIPT} --api-version
                     OUTPUT_VARIABLE FLTK_VERSION)
     string(STRIP "${FLTK_VERSION}" FLTK_VERSION)
-    if(FLTK_VERSION VERSION_GREATER_EQUAL "1.3.0")
+    if(FLTK_VERSION VERSION_LESS "1.4.0")
+      message(FATAL_ERROR "Gmsh requires FLTK 1.4.0 or higher (found FLTK "
+        "${FLTK_VERSION}); set ENABLE_FLTK=0 to build without the GUI")
+    else()
       add_subdirectory(src/fltk)
       set_config_option(HAVE_FLTK "Fltk")
       message(STATUS "Using fltk-config script for Fltk " ${FLTK_VERSION})
-      execute_process(COMMAND ${FLTK_CONFIG_SCRIPT} --use-gl --use-images --includedir
-                      OUTPUT_VARIABLE FLTK_INCLUDE_DIR)
-      string(STRIP "${FLTK_INCLUDE_DIR}" FLTK_INCLUDE_DIR)
+      # the include directories come from the compiler flags, as the headers
+      # of an FLTK built with Cairo (e.g. on Debian) include cairo.h
+      execute_process(COMMAND ${FLTK_CONFIG_SCRIPT} --use-gl --use-images --cxxflags
+                      OUTPUT_VARIABLE FLTK_CXXFLAGS)
+      string(REGEX MATCHALL "-I[^ \t\n]+" FLTK_INCLUDE_DIR "${FLTK_CXXFLAGS}")
+      string(REPLACE "-I" "" FLTK_INCLUDE_DIR "${FLTK_INCLUDE_DIR}")
+      if(NOT FLTK_INCLUDE_DIR)
+        execute_process(COMMAND ${FLTK_CONFIG_SCRIPT} --use-gl --use-images --includedir
+                        OUTPUT_VARIABLE FLTK_INCLUDE_DIR)
+        string(STRIP "${FLTK_INCLUDE_DIR}" FLTK_INCLUDE_DIR)
+      endif()
       list(APPEND EXTERNAL_INCLUDES ${FLTK_INCLUDE_DIR})
       execute_process(COMMAND ${FLTK_CONFIG_SCRIPT} --use-gl --use-images --ldflags
                       OUTPUT_VARIABLE FLTK_LIBRARIES)
@@ -665,6 +677,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/fltk AND ENABLE_FLTK)
     set(FLTK_SKIP_FLUID TRUE)
     find_package(FLTK)
     if(FLTK_FOUND)
+      set(CMAKE_REQUIRED_INCLUDES ${FLTK_INCLUDE_DIR})
+      check_cxx_source_compiles("#include <FL/Enumerations.H>
+        #if FL_API_VERSION < 10400
+        #error
+        #endif
+        int main() { return 0; }" FLTK_14)
+      unset(CMAKE_REQUIRED_INCLUDES)
+      if(NOT FLTK_14)
+        message(FATAL_ERROR "Gmsh requires FLTK 1.4.0 or higher; set "
+          "ENABLE_FLTK=0 to build without the GUI")
+      endif()
       add_subdirectory(src/fltk)
       set_config_option(HAVE_FLTK "Fltk")
       list(APPEND EXTERNAL_INCLUDES ${FLTK_INCLUDE_DIR})
@@ -679,16 +702,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/fltk AND ENABLE_FLTK)
         list(APPEND EXTERNAL_INCLUDES ${X11_INCLUDE_DIR})
         list(APPEND EXTERNAL_LIBRARIES ${X11_LIBRARIES})
       endif()
-    endif()
-  endif()
-endif()
-
-if(APPLE AND HAVE_FLTK AND ENABLE_TOUCHBAR)
-  STRING(REGEX MATCH "([0-9]+.[0-9]+)" OSX_SDK_VERSION "${CMAKE_OSX_SYSROOT}")
-  if(OSX_SDK_VERSION)
-    if(${OSX_SDK_VERSION} VERSION_GREATER 10.11)
-      set(GMSH_SRC ${GMSH_SRC};src/fltk/touchBar.mm)
-      set_config_option(HAVE_TOUCHBAR "TouchBar")
     endif()
   endif()
 endif()
@@ -876,7 +889,7 @@ if(HAVE_MESH OR HAVE_SOLVER)
       set_config_option(HAVE_METIS "Metis")
     elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/contrib/metis)
       # GKlib's own regex, except with Emscripten, whose C library has one
-      # (and is linked whole, see the LINKABLE option below)
+      # (and clashes with it when all the symbols are exported, see below)
       if(NOT EMSCRIPTEN)
         add_definitions(-DUSE_GKREGEX)
       endif()
@@ -941,6 +954,13 @@ if(HAVE_MESH)
     add_subdirectory(contrib/OctreeSizeField)
     include_directories(contrib/OctreeSizeField)
     set_config_option(HAVE_OCTREE_SIZE_FIELD "OctreeSizeField")
+  endif()
+
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/contrib/HierarchicalBasis
+     AND ENABLE_HIERARCHICAL_BASIS)
+    add_subdirectory(contrib/HierarchicalBasis)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/contrib/HierarchicalBasis)
+    set_config_option(HAVE_HIERARCHICAL_BASIS "HierarchicalBasis")
   endif()
 
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/contrib/domhex AND ENABLE_DOMHEX)
@@ -1313,7 +1333,7 @@ if(ENABLE_OCC)
     if(OCC_VERSION AND OCC_VERSION VERSION_GREATER_EQUAL "7.8.0")
       set(OCC_LIBS_REQUIRED
           # subset of DataExchange
-          TKDESTEP TKDEIGES TKXSBase
+          TKDESTEP TKDEIGES TKDE TKXSBase
           # ModelingAlgorithms
           TKOffset TKFeat TKFillet TKBool TKMesh TKHLR TKBO TKPrim TKShHealing
           TKTopAlgo TKGeomAlgo
@@ -1722,6 +1742,13 @@ include_directories(src/common src/fltk src/geo src/graphics src/mesh src/solver
                     src/numeric src/parser src/plugin src/post api
                     ${EXTERNAL_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR}/src/common)
 
+if(HAVE_MTMETIS)
+  # mt-metis was added before all the external includes were known (e.g. the
+  # directory of omp.h): give them to it now, after its own METIS headers
+  target_include_directories(mtmetis PRIVATE ${EXTERNAL_INCLUDES}
+                             ${OpenMP_C_INCLUDE_DIRS})
+endif()
+
 # set this for external codes that might include this CMakeList file
 set(GMSH_EXTERNAL_INCLUDE_DIRS ${EXTERNAL_INCLUDES} CACHE
     STRING "External include directories" FORCE)
@@ -1841,18 +1868,21 @@ elseif(EMSCRIPTEN)
   # handle OpenCASCADE models
   set(FLAGS "-sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=268435456")
   set(FLAGS "${FLAGS} -sMAXIMUM_MEMORY=4294967296 -sSTACK_SIZE=5242880")
-  set(FLAGS "${FLAGS} -sFILESYSTEM=1 -sLINKABLE=1 -sEXPORT_ALL=1")
+  # (all the symbols are exported, as the JavaScript API calls them by name,
+  # with the allocation functions of the C library it hands arguments with)
+  set(FLAGS "${FLAGS} -sFILESYSTEM=1 -sEXPORT_ALL=1")
   set(FLAGS "${FLAGS} -sENVIRONMENT=web,node")
   # the program (gmsh.js, gmsh.wasm), whose main() runs when it is loaded,
   # with the runtime methods needed to drive it from JavaScript
   set_target_properties(gmsh PROPERTIES LINK_FLAGS
-    "${FLAGS} -sEXPORTED_RUNTIME_METHODS=FS,callMain,cwrap,ccall")
+    "${FLAGS} -sEXPORTED_FUNCTIONS=_main,_malloc,_free -sEXPORTED_RUNTIME_METHODS=FS,callMain,cwrap,ccall")
   # the library (libgmsh.mjs, libgmsh.wasm), as an ES module whose default
   # export creates the module, next to the JavaScript API (api/gmsh.mjs), which
   # reads and writes its memory and adds the callbacks to its function table
   add_executable(libgmsh EXCLUDE_FROM_ALL ${GMSH_SRC})
   target_link_libraries(libgmsh ${LINK_LIBRARIES})
   set(LIBFLAGS "${FLAGS} --no-entry -sMODULARIZE=1 -sEXPORT_ES6=1")
+  set(LIBFLAGS "${LIBFLAGS} -sEXPORTED_FUNCTIONS=_malloc,_free")
   set(LIBFLAGS "${LIBFLAGS} -sEXPORT_NAME=createLibgmsh -sALLOW_TABLE_GROWTH=1")
   set(LIBFLAGS "${LIBFLAGS} -sEXPORTED_RUNTIME_METHODS=FS,ccall,cwrap,HEAP32,HEAPU32,HEAPF64,UTF8ToString,stringToUTF8,lengthBytesUTF8,addFunction,removeFunction")
   set_target_properties(libgmsh PROPERTIES LINK_FLAGS "${LIBFLAGS}"
@@ -2144,7 +2174,7 @@ endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E echo
   "@c This file was generated by cmake: do not edit manually!\n${OPT_TEXI}"
-  OUTPUT_FILE cmake_options.texi)
+  OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake_options.texi")
 
 if(MAKEINFO AND TEXI2PDF)
   add_custom_target(doc COMMAND ${CMAKE_COMMAND} -E tar zcf
@@ -2338,6 +2368,9 @@ if(ENABLE_TESTS AND NOT DISABLE_GMSH_TESTS)
       endif()
       add_test(${TEST} ${TEST} -nopopup)
     endforeach()
+    #if(HAVE_HIERARCHICAL_BASIS AND HAVE_EIGEN)
+    #  add_subdirectory(contrib/HierarchicalBasis/tests)
+    #endif()
   endif()
   # enable this once we have worked out the path issues on the build machines
   if(0 AND ENABLE_BUILD_DYNAMIC)
@@ -2350,7 +2383,7 @@ if(ENABLE_TESTS AND NOT DISABLE_GMSH_TESTS)
         string(REPLACE "\." "_" TEST ${TEST})
         add_test(NAME ${TEST} COMMAND ${PYTHON_EXECUTABLE} ${TESTFILE} -nopopup)
         set_property(TEST ${TEST} APPEND PROPERTY ENVIRONMENT
-                     "PYTHONPATH=${CMAKE_SOURCE_DIR}/api")
+                     "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/api")
         set_property(TEST ${TEST} APPEND PROPERTY ENVIRONMENT
                      "LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}")
         endforeach()
@@ -2380,24 +2413,24 @@ if(ENABLE_COVERAGE)
             --synthesize-missing)
       endif()
     endif()
-    set(COV_RAW ${CMAKE_BINARY_DIR}/coverage.raw.info)
-    set(COV_FILTERED ${CMAKE_BINARY_DIR}/coverage.info)
-    set(COV_HTML ${CMAKE_BINARY_DIR}/coverage)
+    set(COV_RAW ${CMAKE_CURRENT_BINARY_DIR}/coverage.raw.info)
+    set(COV_FILTERED ${CMAKE_CURRENT_BINARY_DIR}/coverage.info)
+    set(COV_HTML ${CMAKE_CURRENT_BINARY_DIR}/coverage)
     add_custom_target(coverage_reset
-      COMMAND ${LCOV} --quiet --directory ${CMAKE_BINARY_DIR} --zerocounters
+      COMMAND ${LCOV} --quiet --directory ${CMAKE_CURRENT_BINARY_DIR} --zerocounters
       COMMENT "Resetting code coverage counters")
     add_custom_target(coverage
-      COMMAND ${LCOV} --quiet --directory ${CMAKE_BINARY_DIR}
-        --base-directory ${CMAKE_SOURCE_DIR} --capture --output-file ${COV_RAW}
+      COMMAND ${LCOV} --quiet --directory ${CMAKE_CURRENT_BINARY_DIR}
+        --base-directory ${CMAKE_CURRENT_SOURCE_DIR} --capture --output-file ${COV_RAW}
         ${LCOV_IGNORE}
-      COMMAND ${LCOV} --quiet --remove ${COV_RAW} "${CMAKE_SOURCE_DIR}/contrib/*"
-        "${CMAKE_BINARY_DIR}/*" "petsc/include/*" "/usr/*" "/opt/*" "/Library/*"
+      COMMAND ${LCOV} --quiet --remove ${COV_RAW} "${CMAKE_CURRENT_SOURCE_DIR}/contrib/*"
+        "${CMAKE_CURRENT_BINARY_DIR}/*" "petsc/include/*" "/usr/*" "/opt/*" "/Library/*"
         "/Applications/*" ${LCOV_IGNORE} --output-file ${COV_FILTERED}
       COMMAND ${GENHTML} --quiet --legend
         --title "Gmsh ${GMSH_VERSION} code coverage" --output-directory ${COV_HTML}
         ${GENHTML_IGNORE} ${COV_FILTERED}
       COMMAND ${CMAKE_COMMAND} -E echo "Coverage report: ${COV_HTML}/index.html"
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating HTML coverage report")
     add_dependencies(coverage gmsh)
   else()

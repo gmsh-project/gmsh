@@ -63,7 +63,11 @@ public:
   {
     if(CTX::instance()->fontSize > 0) { return CTX::instance()->fontSize; }
     else {
-      int h = Fl::h(); // main (first) screen
+      // the screen that will show the graphic window
+      int n = Fl::screen_num(CTX::instance()->glPosition[0],
+                             CTX::instance()->glPosition[1]);
+      int x, y, w, h;
+      Fl::screen_work_area(x, y, w, h, n);
       if(h < 800)
         return 11;
       else if(h < 1000)
@@ -77,7 +81,7 @@ public:
       else if(h < 1800)
         return 16;
       float dpih, dpiv;
-      Fl::screen_dpi(dpih, dpiv); // main (first) screen
+      Fl::screen_dpi(dpih, dpiv, n);
       int s = std::max(16, (int)(dpih / 10.));
       return s;
     }
@@ -113,35 +117,16 @@ public:
     glColor4fv(color);
     gl_draw(str);
   }
-// FLTK draws a string as a texture, kept in a pile of a fixed height, from
-// 1.4 on and on macOS before that; the pile is where the three calls below
-// go, and where they do nothing at all otherwise
-#if((FL_MAJOR_VERSION == 1) && (FL_MINOR_VERSION >= 4)) || defined(__APPLE__)
-#define GMSH_FLTK_STRING_TEXTURES 1
-#endif
-
-  bool keepsStringTextures()
-  {
-#if defined(GMSH_FLTK_STRING_TEXTURES)
-    return true;
-#else
-    return false;
-#endif
-  }
+  // FLTK draws a string as a texture, kept in a pile of a fixed height
+  bool keepsStringTextures() { return true; }
   void resetFontTextures()
   {
-#if defined(GMSH_FLTK_STRING_TEXTURES)
     // the strings are drawn again: their textures are made again with them
     gl_texture_pile_height(gl_texture_pile_height());
-#endif
   }
   void reserveStringTextures(std::size_t n)
   {
-#if defined(GMSH_FLTK_STRING_TEXTURES)
     if(gl_texture_pile_height() < (int)n) gl_texture_pile_height((int)n);
-#else
-    (void)n;
-#endif
   }
   bool mouseIsPressed() { return Fl::pushed() ? true : false; }
   std::string getName() { return "Fltk"; }

@@ -277,12 +277,13 @@ highOrderToolsWindow::highOrderToolsWindow(int deltaFontSize)
 
   FL_NORMAL_SIZE -= deltaFontSize;
 
-  int width = 3 * IW + 4 * WB;
+  int width = TW;
   int height = 24 * BH;
 
   win = new paletteWindow(width, height,
                           CTX::instance()->nonModalWindows ? true : false,
-                          "High-order tools");
+                          "High-order tools",
+                          CTX::instance()->hotOffset);
   win->box(GMSH_WINDOW_BOX);
 
   int y = WB;
@@ -315,8 +316,8 @@ highOrderToolsWindow::highOrderToolsWindow(int deltaFontSize)
 
   {
     y += BH;
-    Fl_Box *b =
-      new Fl_Box(x - WB, y, width, BH, "1. Generation of high-order nodes");
+    Fl_Box *b = new Fl_Box(x - WB, y, width - 2 * WB, BH,
+                           "1. Generation of high-order nodes");
     b->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
   }
 
@@ -360,7 +361,7 @@ highOrderToolsWindow::highOrderToolsWindow(int deltaFontSize)
 
   {
     y += BH;
-    Fl_Box *b = new Fl_Box(x - WB, y, width, BH,
+    Fl_Box *b = new Fl_Box(x - WB, y, width - 2 * WB, BH,
                            "2. Regularization of high-order elements");
     b->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
   }
@@ -481,10 +482,9 @@ highOrderToolsWindow::highOrderToolsWindow(int deltaFontSize)
   push[1] = new Fl_Button(width - BB - 2 * WB, y, BB, BH, "Regularize");
   push[1]->callback(highordertools_runopti_cb);
 
-  // win->resizable(o);
-  win->position(CTX::instance()->hotPosition[0],
-                CTX::instance()->hotPosition[1]);
   win->end();
+  // of fixed height, as narrow as the option window, wider as one likes
+  ((paletteWindow *)win)->fixedLayout(width, height, 2 * WB);
   FL_NORMAL_SIZE += deltaFontSize;
 }
 
@@ -526,11 +526,12 @@ highOrderToolsWindow::highOrderToolsWindow(int deltaFontSize)
 {
   FL_NORMAL_SIZE -= deltaFontSize;
 
-  int width = 3 * IW + 4 * WB;
+  int width = TW;
   int height = 24 * BH;
   win = new paletteWindow(width, height,
                           CTX::instance()->nonModalWindows ? true : false,
-                          "High-order tools");
+                          "High-order tools",
+                          CTX::instance()->hotOffset);
   win->box(GMSH_WINDOW_BOX);
 
   int y = WB;
@@ -540,8 +541,6 @@ highOrderToolsWindow::highOrderToolsWindow(int deltaFontSize)
   box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
   box->label("High-order tools requires mesh module");
 
-  win->position(CTX::instance()->hotPosition[0],
-                CTX::instance()->hotPosition[1]);
   win->end();
   FL_NORMAL_SIZE += deltaFontSize;
 }
