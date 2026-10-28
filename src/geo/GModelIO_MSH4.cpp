@@ -4324,12 +4324,12 @@ static void edgesOrFacesToSave(GModel *const model, const Set &set,
   entities.insert(entities.end(), regions.begin(), regions.end());
   for(const auto &mgr : model->getOverlapManagers()) {
     for(const auto &of : std::get<0>(mgr.getAllOverlaps()))
-      if(std::find(partitionsToSave.begin(), partitionsToSave.end(),
-                   of->owningPartition()) != partitionsToSave.end())
+      if(std::binary_search(partitionsToSave.begin(), partitionsToSave.end(),
+                            of->owningPartition()))
         entities.push_back(of);
     for(const auto &orr : std::get<1>(mgr.getAllOverlaps()))
-      if(std::find(partitionsToSave.begin(), partitionsToSave.end(),
-                   orr->owningPartition()) != partitionsToSave.end())
+      if(std::binary_search(partitionsToSave.begin(), partitionsToSave.end(),
+                            orr->owningPartition()))
         entities.push_back(orr);
   }
   std::vector<MElement *> elements;
