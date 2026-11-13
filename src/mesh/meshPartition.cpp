@@ -2466,10 +2466,9 @@ static void assignNewEntityBRep(Graph &graph,
                                 const elementEntityMap &elementToEntity)
 {
   // The pairs of entities (of an element, of a neighbor of dimension one
-  // less) are found in parallel, by chunks of elements, each chunk keeping
-  // the first element pair of each entity pair, then merged in the order of
-  // the chunks: the orientation of an entity pair is the one of its first
-  // element pair in the graph, as when this was serial.
+  // less) are found in parallel, by chunks of elements. Keep the first
+  // occurrence of each signed entity pair, then merge in chunk order. A
+  // periodic seam can bound the same entity with both orientations.
   struct entityPair {
     GEntity *g1, *g2;
     int ori;
@@ -2483,7 +2482,7 @@ static void assignNewEntityBRep(Graph &graph,
   const int nthreads = CTX::instance()->numThreadsFor(graph.ne(), 10000);
 #pragma omp parallel for schedule(dynamic, 1) num_threads(nthreads)
   for(std::size_t c = 0; c < numChunks; c++) {
-    std::set<std::pair<GEntity *, GEntity *>> seen;
+    hashmapentity seen;
     const std::size_t end = std::min(graph.ne(), (c + 1) * chunkSize);
     for(std::size_t i = c * chunkSize; i < end; i++) {
       MElement *current = graph.element(i);
@@ -2492,29 +2491,26 @@ static void assignNewEntityBRep(Graph &graph,
         if(current->getDim() != neighbor->getDim() + 1) continue;
         GEntity *g1 = entityOf(current);
         GEntity *g2 = entityOf(neighbor);
-        if(seen.count(std::make_pair(g1, g2))) continue;
         const int ori = computeOrientation(current, neighbor);
         // A zero orientation means the elements are neighbors in the
         // node-based dual graph without one being a facet of the other,
         // which cannot happen on a conformal mesh. Record nothing: MSH4
         // encodes the orientation as the sign of the tag, so a 0 would read
-        // back as -1. Leave the pair unmarked, so another element pair can
-        // still establish the relation with a real orientation.
+        // back as -1. Another element pair can still establish the relation
+        // with a real orientation.
         if(!ori) continue;
-        seen.insert(std::make_pair(g1, g2));
+        if(!seen[g1].insert(std::make_pair(ori, g2)).second) continue;
         entityPair p = {g1, g2, ori};
         pairs[c].push_back(p);
       }
     }
   }
 
-  std::set<std::pair<GEntity *, GEntity *> > brepWithoutOri;
   hashmapentity brep;
   for(std::size_t c = 0; c < numChunks; c++) {
     for(std::size_t k = 0; k < pairs[c].size(); k++) {
       const entityPair &p = pairs[c][k];
-      if(brepWithoutOri.insert(std::make_pair(p.g1, p.g2)).second)
-        brep[p.g1].insert(std::make_pair(p.ori, p.g2));
+      brep[p.g1].insert(std::make_pair(p.ori, p.g2));
     }
   }
 
