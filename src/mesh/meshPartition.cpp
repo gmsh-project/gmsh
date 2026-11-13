@@ -1233,6 +1233,25 @@ static int getNumFacets(MElement *e, MEdge *) { return e->getNumEdges(); }
 static MFace getFacet(MElement *e, int i, MFace *) { return e->getFace(i); }
 static MEdge getFacet(MElement *e, int i, MEdge *) { return e->getEdge(i); }
 
+static int getFacetOrientation(const MFace &reference, const MFace &element)
+{
+  int rotation;
+  bool swap;
+  if(!reference.computeCorrespondence(element, rotation, swap)) return 0;
+  return swap ? -1 : 1;
+}
+
+static int getFacetOrientation(const MEdge &reference, const MEdge &element)
+{
+  if(reference.getVertex(0) == element.getVertex(0) &&
+     reference.getVertex(1) == element.getVertex(1))
+    return 1;
+  if(reference.getVertex(0) == element.getVertex(1) &&
+     reference.getVertex(1) == element.getVertex(0))
+    return -1;
+  return 0;
+}
+
 template <class KEY, class HASH, class EQUAL> class BRepDistributor {
 private:
   std::unordered_map<KEY, std::size_t, HASH, EQUAL> _owner;
@@ -2119,35 +2138,17 @@ assignPartitionBoundary(GModel *model, MVertex *ve, MElement *reference,
 static int computeOrientation(MElement *reference, MElement *element)
 {
   if(element->getDim() == 2) {
-    std::vector<MVertex *> vertices;
-    element->getVertices(vertices);
-    MFace face = element->getFace(0);
+    const MFace face = element->getFace(0);
     for(int i = 0; i < reference->getNumFaces(); i++) {
-      if(reference->getFace(i) == face) {
-        std::vector<MVertex *> referenceVertices;
-        reference->getFaceVertices(i, referenceVertices);
-
-        if(referenceVertices == vertices)
-          return 1;
-        else
-          return -1;
-      }
+      const int ori = getFacetOrientation(reference->getFace(i), face);
+      if(ori) return ori;
     }
   }
   else if(element->getDim() == 1) {
-    std::vector<MVertex *> vertices;
-    element->getVertices(vertices);
-    MEdge face = element->getEdge(0);
+    const MEdge edge = element->getEdge(0);
     for(int i = 0; i < reference->getNumEdges(); i++) {
-      if(reference->getEdge(i) == face) {
-        std::vector<MVertex *> referenceVertices;
-        reference->getEdgeVertices(i, referenceVertices);
-
-        if(referenceVertices == vertices)
-          return 1;
-        else
-          return -1;
-      }
+      const int ori = getFacetOrientation(reference->getEdge(i), edge);
+      if(ori) return ori;
     }
   }
   else if(element->getDim() == 0) {
