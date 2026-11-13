@@ -1330,6 +1330,43 @@ static void maxEntitySize(ITERATOR it_beg, ITERATOR it_end, int geomType,
   }
 }
 
+// Detach every signed use of a boundary entity. The reverse adjacency lists
+// contain each neighbor only once, while a seam occurs twice in its boundary.
+// Keep one entry per use so the split components can restore both signs.
+static void detachBoundaryUses(GEdge *edge, std::vector<GFace *> &brep,
+                               std::vector<int> &orientations)
+{
+  for(auto face : edge->faces()) {
+    const std::vector<GEdge *> &edges = face->edges();
+    const std::vector<int> &dirs = face->edgeOrientations();
+    std::size_t count = 0;
+    for(std::size_t i = 0; i < edges.size(); i++) {
+      if(edges[i] != edge) continue;
+      brep.push_back(face);
+      orientations.push_back(i < dirs.size() ? dirs[i] : 1);
+      count++;
+    }
+    for(std::size_t i = 0; i < count; i++) face->delEdge(edge);
+  }
+}
+
+static void detachBoundaryUses(GFace *face, std::vector<GRegion *> &brep,
+                               std::vector<int> &orientations)
+{
+  for(auto region : face->regions()) {
+    const std::vector<GFace *> &faces = region->faces();
+    const std::vector<int> &dirs = region->faceOrientations();
+    std::size_t count = 0;
+    for(std::size_t i = 0; i < faces.size(); i++) {
+      if(faces[i] != face) continue;
+      brep.push_back(region);
+      orientations.push_back(i < dirs.size() ? dirs[i] : 1);
+      count++;
+    }
+    for(std::size_t i = 0; i < count; i++) region->delFace(face);
+  }
+}
+
 // Divides the partition entities of dimension dim (all if dim < 0) that are
 // not connected. Their components are found on a graph built for each entity,
 // unless they are given in components (see findPartitionComponents()), in
@@ -1503,12 +1540,7 @@ divideNonConnectedEntities(GModel *model, int dim,
           ret = true;
           PendingEdgeSplit split;
           split.edge = edge;
-          split.brep = edge->faces();
-          split.orientations.reserve(split.brep.size());
-          for(auto itBRep = split.brep.begin(); itBRep != split.brep.end();
-              ++itBRep) {
-            split.orientations.push_back((*itBRep)->delEdge(edge));
-          }
+          detachBoundaryUses(edge, split.brep, split.orientations);
           for(std::size_t i = 0; i < connectedElements.size(); i++) {
             std::size_t comp = distributor.newComponent();
             split.components.push_back(comp);
@@ -1641,12 +1673,7 @@ divideNonConnectedEntities(GModel *model, int dim,
           ret = true;
           PendingFaceSplit split;
           split.face = face;
-          std::list<GRegion *> BRepRegions = face->regions();
-          split.brep.assign(BRepRegions.begin(), BRepRegions.end());
-          split.orientations.reserve(split.brep.size());
-          for(std::size_t j = 0; j < split.brep.size(); j++) {
-            split.orientations.push_back(split.brep[j]->delFace(face));
-          }
+          detachBoundaryUses(face, split.brep, split.orientations);
           for(std::size_t i = 0; i < connectedElements.size(); i++) {
             std::size_t comp = distributor.newComponent();
             split.components.push_back(comp);
@@ -2620,10 +2647,7 @@ static bool splitPartitionCurvesAtJunctions(GModel *model)
     ret = true;
     PendingCurveSplit split;
     split.edge = edge;
-    split.brep = edge->faces();
-    split.orientations.reserve(split.brep.size());
-    for(std::size_t j = 0; j < split.brep.size(); j++)
-      split.orientations.push_back(split.brep[j]->delEdge(edge));
+    detachBoundaryUses(edge, split.brep, split.orientations);
     for(std::size_t i = 0; i < components.size(); i++) {
       std::size_t comp = distributor.newComponent();
       split.components.push_back(comp);
