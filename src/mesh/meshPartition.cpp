@@ -1255,7 +1255,7 @@ static int getFacetOrientation(const MEdge &reference, const MEdge &element)
 template <class KEY, class HASH, class EQUAL> class BRepDistributor {
 private:
   std::unordered_map<KEY, std::size_t, HASH, EQUAL> _owner;
-  std::vector<std::set<GEntity *, GEntityPtrFullLessThan> > _bounds;
+  std::vector<setorientity> _bounds;
 
 public:
   std::size_t newComponent()
@@ -1277,11 +1277,14 @@ public:
       offset[i + 1] = offset[i] + cand[i]->getNumMeshElements();
     const std::size_t chunkSize = 4096;
     const std::size_t numChunks = (offset.back() + chunkSize - 1) / chunkSize;
-    std::set<std::pair<std::size_t, std::size_t>> hits; // component, cand.
+    // A component may touch only one side of a neighbor even when the
+    // unsplit entity had both signed uses, so retain the orientation too.
+    using Hit = std::pair<std::pair<std::size_t, std::size_t>, int>;
+    std::set<Hit> hits; // (component, candidate), orientation
     const int nthreads = CTX::instance()->numThreadsFor(offset.back(), 10000);
 #pragma omp parallel num_threads(nthreads)
     {
-      std::set<std::pair<std::size_t, std::size_t>> myHits;
+      std::set<Hit> myHits;
 #pragma omp for schedule(dynamic, 1)
       for(std::size_t c = 0; c < numChunks; c++) {
         const std::size_t end = std::min(offset.back(), (c + 1) * chunkSize);
@@ -1292,20 +1295,26 @@ public:
           while(i >= offset[k + 1]) k++;
           MElement *e = cand[k]->getMeshElement(i - offset[k]);
           for(int j = 0; j < getNumFacets(e, (KEY *)nullptr); j++) {
-            auto it = _owner.find(getFacet(e, j, (KEY *)nullptr));
-            if(it != _owner.end()) myHits.insert(std::make_pair(it->second, k));
+            KEY facet = getFacet(e, j, (KEY *)nullptr);
+            auto it = _owner.find(facet);
+            if(it == _owner.end()) continue;
+            const int ori = getFacetOrientation(facet, it->first);
+            if(ori)
+              myHits.insert(std::make_pair(std::make_pair(it->second, k), ori));
           }
         }
       }
 #pragma omp critical
       hits.insert(myHits.begin(), myHits.end());
     }
-    for(auto it = hits.begin(); it != hits.end(); ++it)
-      _bounds[it->first].insert(cand[it->second]);
+    for(const auto &hit : hits)
+      _bounds[hit.first.first].insert(
+        std::make_pair(hit.second, cand[hit.first.second]));
   }
-  bool touches(std::size_t component, GEntity *neighbor) const
+  bool touches(std::size_t component, GEntity *neighbor, int orientation) const
   {
-    return _bounds[component].find(neighbor) != _bounds[component].end();
+    return _bounds[component].find(std::make_pair(orientation, neighbor)) !=
+           _bounds[component].end();
   }
   bool empty() const { return _owner.empty(); }
 };
@@ -1581,7 +1590,9 @@ divideNonConnectedEntities(GModel *model, int dim,
           pedge->addElement(split.elements[i][j]);
         // Move B-Rep: only to the surfaces this component really bounds
         for(std::size_t j = 0; j < split.brep.size(); j++) {
-          if(!distributor.touches(split.components[i], split.brep[j])) continue;
+          if(!distributor.touches(split.components[i], split.brep[j],
+                                  split.orientations[j]))
+            continue;
           split.brep[j]->setEdge(pedge, split.orientations[j]);
           pedge->addFace(split.brep[j]);
         }
@@ -1713,7 +1724,9 @@ divideNonConnectedEntities(GModel *model, int dim,
           pface->addElement(split.elements[i][j]);
         // Move B-Rep: only to the volumes this component really bounds
         for(std::size_t j = 0; j < split.brep.size(); j++) {
-          if(!distributor.touches(split.components[i], split.brep[j])) continue;
+          if(!distributor.touches(split.components[i], split.brep[j],
+                                  split.orientations[j]))
+            continue;
           split.brep[j]->setFace(pface, split.orientations[j]);
           pface->addRegion(split.brep[j]);
         }
@@ -2674,7 +2687,9 @@ static bool splitPartitionCurvesAtJunctions(GModel *model)
       for(std::size_t j = 0; j < split.elements[i].size(); j++)
         pedge->addElement(split.elements[i][j]);
       for(std::size_t j = 0; j < split.brep.size(); j++) {
-        if(!distributor.touches(split.components[i], split.brep[j])) continue;
+        if(!distributor.touches(split.components[i], split.brep[j],
+                                split.orientations[j]))
+          continue;
         split.brep[j]->setEdge(pedge, split.orientations[j]);
         pedge->addFace(split.brep[j]);
       }
