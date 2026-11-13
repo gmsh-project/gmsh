@@ -2407,16 +2407,16 @@ static void createPartitionBoundaries(
     model->setMaxElementNumber(firstNum + firstRecord[numChunks] - 1);
 
   // Finally, the partition entities are created and the facets added to
-  // them, in the order of the graph. Every facet records the entities it
-  // bounds, unless already recorded; a zero orientation cannot happen on a
+  // them, in the order of the graph. Every facet records the signed entities
+  // it bounds, unless already recorded; a zero orientation cannot happen on a
   // conformal mesh (see assignNewEntityBRep): the pair is left for another
   // facet. Consecutive facets mostly belong to the same partition entity, so
   // the last one and the entities it bounds are kept at hand.
-  std::unordered_map<GEntity *, std::vector<GEntity *>> bounds;
+  std::unordered_map<GEntity *, std::vector<std::pair<int, GEntity *>>> bounds;
   std::vector<int> partitions, lastPartitions;
   GEntity *lastReference = nullptr, *lastOther = nullptr;
   PART_ENTITY *pe = nullptr;
-  std::vector<GEntity *> *peBounds = nullptr;
+  std::vector<std::pair<int, GEntity *>> *peBounds = nullptr;
   for(std::size_t c = 0; c < numChunks; c++) {
     for(std::size_t r = 0; r < records[c].size(); r++) {
       const facetRecord &rec = records[c][r];
@@ -2447,10 +2447,11 @@ static void createPartitionBoundaries(
       addFacetElement(pe, facets[c][r]);
       for(std::size_t j = rec.first; j < rec.last; j++) {
         GEntity *b = entities[c][j];
+        const auto bound = std::make_pair(orientations[c][j], b);
         if(!orientations[c][j] ||
-           std::find(peBounds->begin(), peBounds->end(), b) != peBounds->end())
+           std::find(peBounds->begin(), peBounds->end(), bound) != peBounds->end())
           continue;
-        peBounds->push_back(b);
+        peBounds->push_back(bound);
         addPartitionBoundary(b, pe, orientations[c][j]);
       }
     }
