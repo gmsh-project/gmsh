@@ -85,20 +85,14 @@ bool GFace::isOrphan()
 int GFace::delEdge(GEdge *edge)
 {
   const auto found = std::find(l_edges.begin(), l_edges.end(), edge);
+  if(found == l_edges.end()) return 0;
 
-  if(found != l_edges.end()) { l_edges.erase(found); }
+  const std::size_t pos = std::distance(l_edges.begin(), found);
+  l_edges.erase(found);
+  if(pos >= l_dirs.size()) return 0;
 
-  const auto pos = std::distance(l_edges.begin(), found);
-
-  if(l_dirs.empty()) { return 0; }
-
-  if(l_dirs.size() < static_cast<std::size_t>(pos)) {
-    l_dirs.erase(std::prev(l_dirs.end()));
-    return 0;
-  }
-
-  const auto orientation = l_dirs.at(pos);
-  l_dirs.erase(std::next(begin(l_dirs), pos));
+  const int orientation = l_dirs[pos];
+  l_dirs.erase(l_dirs.begin() + pos);
   return orientation;
 }
 

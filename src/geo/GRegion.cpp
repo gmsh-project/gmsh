@@ -254,24 +254,14 @@ void GRegion::setColor(unsigned int val, bool recursive)
 int GRegion::delFace(GFace *face)
 {
   const auto found = std::find(l_faces.begin(), l_faces.end(), face);
+  if(found == l_faces.end()) return 0;
 
-  if(found == l_faces.end()) { return 0; }
-
-  const auto pos = std::distance(l_faces.begin(), found);
-
+  const std::size_t pos = std::distance(l_faces.begin(), found);
   l_faces.erase(found);
+  if(pos >= l_dirs.size()) return 0;
 
-  if(l_dirs.empty()) { return 0; }
-
-  if(l_dirs.size() < static_cast<std::size_t>(pos)) {
-    l_dirs.erase(std::prev(l_dirs.end()));
-    return 0;
-  }
-
-  const auto orientation = l_dirs.at(pos);
-
-  l_dirs.erase(std::next(l_dirs.begin(), pos));
-
+  const int orientation = l_dirs[pos];
+  l_dirs.erase(l_dirs.begin() + pos);
   return orientation;
 }
 
