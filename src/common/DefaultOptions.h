@@ -1686,8 +1686,9 @@ StringXNumber MeshOptions_Number[] = {
   { F|O, "PartitionLineWeight" , opt_mesh_partition_line_weight , -1 ,
     "Weight of line element for METIS load balancing (-1: automatic)" },
   { F|O, "PartitionPeriodic" , opt_mesh_partition_periodic , 0 ,
-    "Partition periodic meshes so that the elements matched by the periodicity "
-    "are in the same partition, and make the partition entities periodic" },
+    "Partition periodic meshes as if glued along the periodic entities, and "
+    "cut the partition entities on all the copies of a periodic entity the "
+    "same way, with the partitions of all the copies, making them periodic" },
   { F|O, "PartitionPrismWeight" , opt_mesh_partition_pri_weight , -1 ,
     "Weight of prismatic element (wedge) for METIS load balancing (-1: automatic)" },
   { F|O, "PartitionPyramidWeight" , opt_mesh_partition_pyr_weight , -1 ,
